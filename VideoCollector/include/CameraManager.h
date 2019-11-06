@@ -21,7 +21,6 @@ class CameraManager {
         // zed Mat variables
         sl::Mat _zedLeftMat, _zedRightMat;
         //sl::Mat _zedRightMat;
-        cv::Mat _cvLeftMat, _cvRightMat;
 
         //bool displayOK;
         
@@ -34,14 +33,18 @@ class CameraManager {
         // Convert sl::Mat to cv::Mat for GPU
         cv::cuda::GpuMat slMatToCvMatConverterForGPU(sl::Mat &slMat);
         
+    protected:
+        //sl::ERROR_CODE _grabErrorCode;
+        //cv::Mat _cvLeftMat, _cvRightMat;
+        cv::cuda::GpuMat _cvLeftGpuMat, _cvRightGpuMat;
     public:
         CameraManager();
         ~CameraManager();
 
         // Getters
-        cv::Mat cvLeftMat() {return _cvLeftMat;};
-        cv::Mat cvRightMat() {return _cvRightMat;};
+        //cv::Mat cvLeftMat() {return _cvLeftMat;};
+        //cv::Mat cvRightMat() {return _cvRightMat;};
 
-        void getOneFrameFromZED();
+        sl::ERROR_CODE getOneFrameFromZED();
         void displayFrames();
 };

@@ -26,6 +26,7 @@ CameraManager::~CameraManager()
 void CameraManager::initParams()
 {
     _init_params.camera_resolution = sl::RESOLUTION_HD1080;
+    //_init_params.camera_resolution = sl::RESOLUTION_HD2K;
     _init_params.depth_mode = sl::DEPTH_MODE_NONE;
     _init_params.camera_disable_imu = true; // disable imu of ZED
     _runtime_parameters.enable_depth = false;
@@ -72,9 +73,11 @@ cv::cuda::GpuMat CameraManager::slMatToCvMatConverterForGPU(sl::Mat &slMat) {
                 slMat.getPtr<sl::uchar1>(sl::MEM_GPU), slMat.getStepBytes(sl::MEM_GPU));
 }
 
-void CameraManager::getOneFrameFromZED()
-{
-    if(_zed.grab(_runtime_parameters) == sl::SUCCESS){
+sl::ERROR_CODE CameraManager::getOneFrameFromZED()
+{   
+    sl::ERROR_CODE grabErrorCode = _zed.grab(_runtime_parameters);
+
+    if(grabErrorCode == sl::SUCCESS){
         //displayOK = true;
         // Retrieve the left image, depth image in half-resolution
         //sl::Mat _zedLeftMat(_zed.getResolution(), sl::MAT_TYPE_8U_C3, sl::MEM_GPU);
@@ -83,15 +86,19 @@ void CameraManager::getOneFrameFromZED()
         _zed.retrieveImage(_zedLeftMat, sl::VIEW_LEFT, sl::MEM_GPU);
         _zed.retrieveImage(_zedRightMat, sl::VIEW_RIGHT, sl::MEM_GPU);
         
-        cv::Mat cvLeftMat(slMatToCvMatConverterForGPU(_zedLeftMat));
-        cv::Mat cvRightMat(slMatToCvMatConverterForGPU(_zedRightMat));
+        cv::cuda::GpuMat leftGpuMat = slMatToCvMatConverterForGPU(_zedLeftMat);
+        cv::cuda::GpuMat rightGpuMat = slMatToCvMatConverterForGPU(_zedRightMat);
+        
+        //cv::Mat cvLeftMat(slMatToCvMatConverterForGPU(_zedLeftMat));
+        //cv::Mat cvRightMat(slMatToCvMatConverterForGPU(_zedRightMat));
+        //cv::cvtColor(cvLeftMat, _cvLeftMat, cv::COLOR_BGRA2BGR);
+        //cv::cvtColor(cvRightMat, _cvRightMat, cv::COLOR_BGRA2BGR);
 
-        cv::cvtColor(cvLeftMat, _cvLeftMat, cv::COLOR_BGRA2BGR);
-        cv::cvtColor(cvRightMat, _cvRightMat, cv::COLOR_BGRA2BGR);
+        cv::cuda::cvtColor(leftGpuMat, _cvLeftGpuMat, cv::COLOR_BGRA2BGR);
+        cv::cuda::cvtColor(rightGpuMat, _cvRightGpuMat, cv::COLOR_BGRA2BGR);
+    }
 
-    } /*else {
-        displayOK = false;
-    }*/
+    return grabErrorCode;
 }
 
 /*void CameraManager::displayFrames(){
