@@ -6,9 +6,15 @@
 
 #include <opencv2/opencv.hpp>
 
-#include <cassert> // assert Macro
+//#include <cassert> // assert Macro
+
 #include <thread> // std::this_thread::sleep_for
 #include <chrono> // std::chrono::seconds
+
+#include <mutex> // std::mutex for lock shared variable
+
+
+//static std::mutex threadLockMutex; // global variable for mutex
 
 class CameraManager {
     private:
@@ -26,27 +32,39 @@ class CameraManager {
         
         // Set configuration parameters
         void initParams();
-
-        // Open the camera
-        void openCamera();
-
+        
         // Convert sl::Mat to cv::Mat for GPU
         cv::cuda::GpuMat slMatToCvMatConverterForGPU(sl::Mat &slMat);
+
         
     protected:
         //sl::ERROR_CODE _grabErrorCode;
         //cv::Mat _cvLeftMat, _cvRightMat;
-        cv::cuda::GpuMat _cvLeftGpuMat, _cvRightGpuMat;
+        //cv::cuda::GpuMat _cvLeftGpuMat, _cvRightGpuMat;
+    
     public:
+
         CameraManager();
         ~CameraManager();
 
         // Getters
-        //cv::Mat cvLeftMat() {return _cvLeftMat;};
-        //cv::Mat cvRightMat() {return _cvRightMat;};
+        /* cv::cuda::GpuMat cvLeftGpuMat() {
+            std::lock_guard<std::mutex> gaurd(threadLockMutex);
+            return _cvLeftGpuMat;
+        };
 
-        sl::ERROR_CODE getOneFrameFromZED();
-        void displayFrames();
+        cv::cuda::GpuMat cvRightGpuMat() {
+            std::lock_guard<std::mutex> gaurd(threadLockMutex);
+            return _cvRightGpuMat;
+        }; */
+
+        // Open the camera
+        void openCamera();
+        
+        void getOneFrameFromZED(std::mutex &threadLockMutex, cv::cuda::GpuMat &prvsLeftGpuMat, cv::cuda::GpuMat &prvsRightGpuMat, cv::cuda::GpuMat &nextLeftGpuMat, cv::cuda::GpuMat &nextRightGpuMat);
+        void startCollectingFramesForMultiThread();
+
+        //void displayFrames();
         void cc(){
             for (int i=0; i<10; i++) {
                 std::fprintf(stdout, "Camera!\n");

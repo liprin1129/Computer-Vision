@@ -1,26 +1,25 @@
-#include <opencv2/core.hpp>
-#include "CameraManager.h"
-//#include <opencv2/cudaoptflow.hpp>
+#include <iostream>
 
-class OpticalFlowManager: CameraManager {
+#include <thread> // std::this_thread::sleep_for
+#include <chrono> // std::chrono::seconds
+
+#include <mutex> // std::mutex for lock shared variable
+
+#include <opencv2/opencv.hpp>
+//#include <opencv2/core.hpp>
+
+class OpticalFlowManager {
     private:
-        cv::Mat _prvsLeftMat, _nextLeftMat;
-        cv::Mat _prvsRightMat, _nextRightMat;
+        cv::cuda::GpuMat _flowLeftGpuMat, _flowRightGpuMat;
 
-        cv::cuda::GpuMat _prvsLeftGpuMat, _nextLeftGpuMat;
-        cv::cuda::GpuMat _prvsRightGpuMat, _nextRightGpuMat;
-        
-        cv::cuda::GpuMat _flowGpuMat;
-
-        bool _firstGetFlag, _secondGetFlag;
-        //void startOpticalFlow();
         void calcOpticalFlowGPU(cv::cuda::GpuMat &prvsGpuMat, cv::cuda::GpuMat &nextGpuMat, cv::cuda::GpuMat &xyVelocityGpuMat);
 
     public:
         OpticalFlowManager();
         ~OpticalFlowManager();
 
-        void startOpticalFlow();
+        void startOpticalFlow(std::mutex &threadLockMutex, cv::cuda::GpuMat &prvsLeftGpuMat, cv::cuda::GpuMat &prvsRightGpuMat, cv::cuda::GpuMat &nextLeftGpuMat, cv::cuda::GpuMat &nextRightGpuMat);
+        
         std::tuple<float, float> calcFlowMagnitude(const cv::cuda::GpuMat& d_flow);
 
         void cc(){

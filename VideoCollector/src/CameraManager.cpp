@@ -2,7 +2,6 @@
 
 CameraManager::CameraManager() {
     initParams(); // Set configuration parameters
-    //openCamera(); // Open the camera
     
     // Initialise slMats
     //_zedLeftMat = sl::Mat(_zed.getResolution(), sl::MAT_TYPE_8U_C3, sl::MEM_GPU);
@@ -73,32 +72,81 @@ cv::cuda::GpuMat CameraManager::slMatToCvMatConverterForGPU(sl::Mat &slMat) {
                 slMat.getPtr<sl::uchar1>(sl::MEM_GPU), slMat.getStepBytes(sl::MEM_GPU));
 }
 
-sl::ERROR_CODE CameraManager::getOneFrameFromZED()
+void CameraManager::getOneFrameFromZED(std::mutex &threadLockMutex, cv::cuda::GpuMat &prvsLeftGpuMat, cv::cuda::GpuMat &prvsRightGpuMat, cv::cuda::GpuMat &nextLeftGpuMat, cv::cuda::GpuMat &nextRightGpuMat)
 {   
-    sl::ERROR_CODE grabErrorCode = _zed.grab(_runtime_parameters);
+    while (true) {
+        threadLockMutex.lock();
+        //std::cout << "Camera Thread." << std::endl << std::flush;
 
-    if(grabErrorCode == sl::SUCCESS){
-        //displayOK = true;
-        // Retrieve the left image, depth image in half-resolution
-        //sl::Mat _zedLeftMat(_zed.getResolution(), sl::MAT_TYPE_8U_C3, sl::MEM_GPU);
-        //sl::Mat _zedRightMat(_zed.getResolution(), sl::MAT_TYPE_8U_C3, sl::MEM_GPU);
-        
-        _zed.retrieveImage(_zedLeftMat, sl::VIEW_LEFT, sl::MEM_GPU);
-        _zed.retrieveImage(_zedRightMat, sl::VIEW_RIGHT, sl::MEM_GPU);
-        
-        cv::cuda::GpuMat leftGpuMat = slMatToCvMatConverterForGPU(_zedLeftMat);
-        cv::cuda::GpuMat rightGpuMat = slMatToCvMatConverterForGPU(_zedRightMat);
-        
-        //cv::Mat cvLeftMat(slMatToCvMatConverterForGPU(_zedLeftMat));
-        //cv::Mat cvRightMat(slMatToCvMatConverterForGPU(_zedRightMat));
-        //cv::cvtColor(cvLeftMat, _cvLeftMat, cv::COLOR_BGRA2BGR);
-        //cv::cvtColor(cvRightMat, _cvRightMat, cv::COLOR_BGRA2BGR);
+        // Save prvious frame loop
+        while (true) {
+            if (_zed.grab(_runtime_parameters) == sl::SUCCESS){
+                //displayOK = true;
+                // Retrieve the left image, depth image in half-resolution
+                //sl::Mat _zedLeftMat(_zed.getResolution(), sl::MAT_TYPE_8U_C3, sl::MEM_GPU);
+                //sl::Mat _zedRightMat(_zed.getResolution(), sl::MAT_TYPE_8U_C3, sl::MEM_GPU);
+                
+                _zed.retrieveImage(_zedLeftMat, sl::VIEW_LEFT, sl::MEM_GPU);
+                _zed.retrieveImage(_zedRightMat, sl::VIEW_RIGHT, sl::MEM_GPU);
+                
+                cv::cuda::GpuMat leftGpuMat = slMatToCvMatConverterForGPU(_zedLeftMat);
+                cv::cuda::GpuMat rightGpuMat = slMatToCvMatConverterForGPU(_zedRightMat);
+                
+                //cv::Mat cvLeftMat(slMatToCvMatConverterForGPU(_zedLeftMat));
+                //cv::Mat cvRightMat(slMatToCvMatConverterForGPU(_zedRightMat));
+                //cv::cvtColor(cvLeftMat, _cvLeftMat, cv::COLOR_BGRA2BGR);
+                //cv::cvtColor(cvRightMat, _cvRightMat, cv::COLOR_BGRA2BGR);
 
-        cv::cuda::cvtColor(leftGpuMat, _cvLeftGpuMat, cv::COLOR_BGRA2BGR);
-        cv::cuda::cvtColor(rightGpuMat, _cvRightGpuMat, cv::COLOR_BGRA2BGR);
+                cv::cuda::cvtColor(leftGpuMat, prvsLeftGpuMat, cv::COLOR_BGRA2BGR);
+                cv::cuda::cvtColor(rightGpuMat, prvsRightGpuMat, cv::COLOR_BGRA2BGR);
+
+                //std::cout << "Previous Saved!" << std::endl;
+                break;
+            }
+        }
+
+        // Save next frame loop
+        while (true) {
+            if (_zed.grab(_runtime_parameters) == sl::SUCCESS){
+                //displayOK = true;
+                // Retrieve the left image, depth image in half-resolution
+                //sl::Mat _zedLeftMat(_zed.getResolution(), sl::MAT_TYPE_8U_C3, sl::MEM_GPU);
+                //sl::Mat _zedRightMat(_zed.getResolution(), sl::MAT_TYPE_8U_C3, sl::MEM_GPU);
+                
+                _zed.retrieveImage(_zedLeftMat, sl::VIEW_LEFT, sl::MEM_GPU);
+                _zed.retrieveImage(_zedRightMat, sl::VIEW_RIGHT, sl::MEM_GPU);
+                
+                cv::cuda::GpuMat leftGpuMat = slMatToCvMatConverterForGPU(_zedLeftMat);
+                cv::cuda::GpuMat rightGpuMat = slMatToCvMatConverterForGPU(_zedRightMat);
+                
+                //cv::Mat cvLeftMat(slMatToCvMatConverterForGPU(_zedLeftMat));
+                //cv::Mat cvRightMat(slMatToCvMatConverterForGPU(_zedRightMat));
+                //cv::cvtColor(cvLeftMat, _cvLeftMat, cv::COLOR_BGRA2BGR);
+                //cv::cvtColor(cvRightMat, _cvRightMat, cv::COLOR_BGRA2BGR);
+
+                cv::cuda::cvtColor(leftGpuMat, nextLeftGpuMat, cv::COLOR_BGRA2BGR);
+                cv::cuda::cvtColor(rightGpuMat, nextRightGpuMat, cv::COLOR_BGRA2BGR);
+                
+                //std::cout << "Next Saved!" << std::endl;
+                break;
+            }
+        }
+
+        threadLockMutex.unlock();
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
+        
+        //std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+}
 
-    return grabErrorCode;
+void CameraManager::startCollectingFramesForMultiThread() {
+    openCamera(); // Open the camera
+
+    /* 
+    while (true) {
+        getOneFrameFromZED();
+    }
+    */
 }
 
 /*void CameraManager::displayFrames(){
