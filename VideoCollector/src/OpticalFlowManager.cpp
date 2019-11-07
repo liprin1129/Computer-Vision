@@ -126,39 +126,47 @@ static void showFlow(const char* name, const cv::cuda::GpuMat& d_flow)
     cv::imshow(name, out);
 }
 
+std::tuple<float, float> OpticalFlowManager::calcFlowMagnitude(const cv::cuda::GpuMat& d_flow) {
+    cv::cuda::GpuMat xyPlanes[2];
+    cv::cuda::split(d_flow, xyPlanes);
+
+    cv::cuda::GpuMat sqrGpuX, sqrGpuY, addSqrGpuXY, sqrtGpuXY;
+
+    cv::cuda::sqr(xyPlanes[0], sqrGpuX); 
+    cv::cuda::sqr(xyPlanes[1], sqrGpuY);
+    cv::cuda::add(sqrGpuX, sqrGpuY, addSqrGpuXY);
+    cv::cuda::sqrt(addSqrGpuXY, sqrtGpuXY);
+    
+    //auto a = cv::Mat(sqrtGpuXY);
+    //std::cout << "GPU: " << a.size() << std::endl;
+    //std::cout << "GPU: " << a.channels() << std::endl;
+
+    cv::Mat sqrtXY, meanVal, stdVal;
+    sqrtGpuXY.download(sqrtXY);
+    cv::meanStdDev(sqrtXY, meanVal, stdVal);
+
+    return std::make_tuple(
+        static_cast<float>(meanVal.at<double>(0)), 
+        static_cast<float>(stdVal.at<double>(0)));
+}
+
 OpticalFlowManager::OpticalFlowManager() {
-    //cm = CameraManager();
+    _firstGetFlag = false; _secondGetFlag = true;
 
-    /*
-    char key = ' ';
-    while (key != 'q') {
-        getOneFrameFromZED();
-        
-        cv::Mat mat1 = cvLeftMat();
+    //cv::namedWindow("OriginLeftView", cv::WINDOW_OPENGL);
+    //cv::namedWindow("OriginRightView", cv::WINDOW_OPENGL);
+    
+    //cv::namedWindow("FlowView", cv::WINDOW_OPENGL);
 
-        if (!mat1.empty()) {
-            cv::imshow("Image", mat1);
-            //std::cout << mat1.channels() << std::endl;
-            // Handle key event
-            key = cv::waitKey(10);
-        }
-    }
-    */
-    //prvsLeftGpuMat = cv::cuda::GpuMat(cv::Size(1, 1), CV_8UC1);
-    firstGetFlag = false; secondGetFlag = true;
-
-    cv::namedWindow("OriginLeftView", cv::WINDOW_OPENGL);
-    cv::namedWindow("OriginRightView", cv::WINDOW_OPENGL);
-    cv::namedWindow("FlowView", cv::WINDOW_OPENGL);
-
-    startOpticalFlow();
+    //startOpticalFlow();
 }
 
 OpticalFlowManager::~OpticalFlowManager() {
     std::fprintf(stdout, "%s\n", "OpticalFlowManager destructor");
-    cv::destroyWindow("OriginLeftView");
-    cv::destroyWindow("OriginRightView");
-    cv::destroyWindow("FlowView");
+    //cv::destroyWindow("OriginLeftView");
+    //cv::destroyWindow("OriginRightView");
+    
+    //cv::destroyWindow("FlowView");
 }
 
 template <typename T>
@@ -191,50 +199,63 @@ static void colorizeFlow(const cv::Mat &u, const cv::Mat &v, cv::Mat &dst)
 }
 
 void OpticalFlowManager::startOpticalFlow() {
-    
+    cv::cuda::GpuMat resizedPrvsLeftGpuMat, resizedPrvsRightGpuMat;
+    cv::cuda::GpuMat resizedNextLeftGpuMat, resizedNextRightGpuMat;
+
     char key = ' ';
     while (key != 'q') {
         
         // Save the first frame
-        if(firstGetFlag == false and secondGetFlag == true and getOneFrameFromZED() == sl::SUCCESS) {
-            //std::fprintf(stdout, "Referenced!\n");
-            //_cvRightGpuMat.copyTo(prvsRightGpuMat); // _cvRightGpuMat has 2 count
-            cv::cuda::cvtColor(_cvRightGpuMat, prvsRightGpuMat, cv::COLOR_BGR2GRAY);
-            //cv::imshow("OriginView", prvsRightGpuMat);
-            std::fprintf(stdout, "Get first\n");
-            std::fprintf(stdout, "cvRightGpuMat @: %d,\t prvsRightGpuMat @: %d\n", *_cvRightGpuMat.refcount, *prvsRightGpuMat.refcount);
+        if(_firstGetFlag == false and _secondGetFlag == true and getOneFrameFromZED() == sl::SUCCESS) {
+            cv::cuda::cvtColor(_cvRightGpuMat, _prvsRightGpuMat, cv::COLOR_BGR2GRAY);
+            
+            //std::fprintf(stdout, "Get first\n");
+            //std::fprintf(stdout, "cvRightGpuMat @: %d,\t prvsRightGpuMat @: %d\n", *_cvRightGpuMat.refcount, *_prvsRightGpuMat.refcount);
 
-            firstGetFlag = true; secondGetFlag = false;
+            cv::cuda::resize(_prvsRightGpuMat, resizedPrvsRightGpuMat, cv::Size(480, 270));
+            _firstGetFlag = true; _secondGetFlag = false;
         }
 
         // Save the second frame
-        if(firstGetFlag == true and secondGetFlag == false and getOneFrameFromZED() == sl::SUCCESS) {
-            //_cvRightGpuMat.copyTo(nextRightGpuMat); // _cvRightGpuMat has 2 count
-            cv::cuda::cvtColor(_cvRightGpuMat, nextRightGpuMat, cv::COLOR_BGR2GRAY);
-            std::fprintf(stdout, "\tGet second\n");
-            std::fprintf(stdout, "cvRightGpuMat @: %d,\t prvsRightGpuMat @: %d\n", *_cvRightGpuMat.refcount, *prvsRightGpuMat.refcount);
+        if(_firstGetFlag == true and _secondGetFlag == false and getOneFrameFromZED() == sl::SUCCESS) {
+            cv::cuda::cvtColor(_cvRightGpuMat, _nextRightGpuMat, cv::COLOR_BGR2GRAY);
+            //std::fprintf(stdout, "\tGet second\n");
+            //std::fprintf(stdout, "cvRightGpuMat @: %d,\t prvsRightGpuMat @: %d\n", *_cvRightGpuMat.refcount, *_prvsRightGpuMat.refcount);
 
-            firstGetFlag = false; secondGetFlag = true;
+            cv::cuda::resize(_prvsRightGpuMat, resizedNextRightGpuMat, cv::Size(480, 270));
+            _firstGetFlag = false; _secondGetFlag = true;
         }
         
-        if (!prvsRightGpuMat.empty() and !nextRightGpuMat.empty()) {
-            cv::imshow("OriginRightView", prvsRightGpuMat);
-            cv::imshow("OriginLeftView", nextRightGpuMat);
+        /*
+        if (!_prvsRightGpuMat.empty() and !_nextRightGpuMat.empty()) {
+            cv::imshow("OriginRightView", resizedPrvsRightGpuMat);
+            cv::imshow("OriginLeftView", resizedNextRightGpuMat);
             key = cv::waitKey(10);
         }
+        */
 
+        
         //cv::Ptr<cv::cuda::FarnebackOpticalFlow> farn = cv::cuda::FarnebackOpticalFlow::create();
-        cv::Ptr<cv::cuda::OpticalFlowDual_TVL1> tvl1 = cv::cuda::OpticalFlowDual_TVL1::create();
+        //cv::Ptr<cv::cuda::OpticalFlowDual_TVL1> tvl1 = cv::cuda::OpticalFlowDual_TVL1::create();
         {
             const int64 start = cv::getTickCount();
 
-            //farn->calc(prvsRightGpuMat, nextRightGpuMat, flowGpuMat);
-            tvl1->calc(prvsRightGpuMat, nextRightGpuMat, flowGpuMat);
-
+            //farn->calc(resizedPrvsRightGpuMat, resizedNextRightGpuMat, _flowGpuMat);
+            //tvl1->calc(prvsRightGpuMat, nextRightGpuMat, flowGpuMat);
+            calcOpticalFlowGPU(resizedPrvsRightGpuMat, resizedNextRightGpuMat, _flowGpuMat);
             const double timeSec = (cv::getTickCount() - start) / cv::getTickFrequency();
-            std::fprintf(stdout, "Farn : %lf sec\n", timeSec);
 
-            showFlow("FlowView", flowGpuMat);
+            auto [mean, std] = calcFlowMagnitude(_flowGpuMat);
+
+            std::fprintf(stdout, "FlowCalc time : %lf sec\n", timeSec);
+
+            std::fprintf(stdout, "Maen: %f, Std: %f\n", mean, std);
+            //showFlow("FlowView", flowGpuMat);
         }
     }
+}
+
+void OpticalFlowManager::calcOpticalFlowGPU(cv::cuda::GpuMat &prvsGpuMat, cv::cuda::GpuMat &nextGpuMat, cv::cuda::GpuMat &xyVelocityGpuMat) {
+    cv::Ptr<cv::cuda::FarnebackOpticalFlow> farn = cv::cuda::FarnebackOpticalFlow::create();
+    farn->calc(prvsGpuMat, nextGpuMat, _flowGpuMat);
 }

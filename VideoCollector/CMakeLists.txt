@@ -9,6 +9,7 @@ set(CMAKE_CXX_COMPILER /usr/bin/g++-7)
 find_package(OpenCV REQUIRED)
 find_package(ZED 2 REQUIRED)
 find_package(CUDA ${ZED_CUDA_VERSION} EXACT REQUIRED)
+#find_package(Threads)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories("/usr/include/c++/7")
@@ -32,6 +33,8 @@ target_link_libraries(
     ${CUDA_CUDA_LIBRARY} 
     ${CUDA_CUDART_LIBRARY} 
     ${CUDA_NPP_LIBRARIES_ZED}
-    -lstdc++fs)
+    -lstdc++fs
+    -lpthread)
+    #${CMAKE_THREAD_LIBS_INIT})
 
 set_property(TARGET ${execName} PROPERTY CXX_STANDARD 17)# CXX_EXTENSIONS OFF)

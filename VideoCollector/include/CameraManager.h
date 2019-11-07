@@ -47,4 +47,9 @@ class CameraManager {
 
         sl::ERROR_CODE getOneFrameFromZED();
         void displayFrames();
+        void cc(){
+            for (int i=0; i<10; i++) {
+                std::fprintf(stdout, "Camera!\n");
+            }
+        };
 };

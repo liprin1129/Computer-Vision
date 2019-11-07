@@ -2,7 +2,7 @@
 
 CameraManager::CameraManager() {
     initParams(); // Set configuration parameters
-    openCamera(); // Open the camera
+    //openCamera(); // Open the camera
     
     // Initialise slMats
     //_zedLeftMat = sl::Mat(_zed.getResolution(), sl::MAT_TYPE_8U_C3, sl::MEM_GPU);
