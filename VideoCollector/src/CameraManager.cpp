@@ -72,11 +72,12 @@ cv::cuda::GpuMat CameraManager::slMatToCvMatConverterForGPU(sl::Mat &slMat) {
                 slMat.getPtr<sl::uchar1>(sl::MEM_GPU), slMat.getStepBytes(sl::MEM_GPU));
 }
 
-void CameraManager::getOneFrameFromZED(std::mutex &threadLockMutex, cv::cuda::GpuMat &prvsLeftGpuMat, cv::cuda::GpuMat &prvsRightGpuMat, cv::cuda::GpuMat &nextLeftGpuMat, cv::cuda::GpuMat &nextRightGpuMat)
+void CameraManager::getOneFrameFromZED(std::mutex &threadLockMutex, cv::cuda::GpuMat &prvsLeftGpuMat, cv::cuda::GpuMat &prvsRightGpuMat, cv::cuda::GpuMat &nextLeftGpuMat, cv::cuda::GpuMat &nextRightGpuMat, char &key)
 {   
-    while (true) {
+    while (key != 'q') {
         threadLockMutex.lock();
         //std::cout << "Camera Thread." << std::endl << std::flush;
+        std::cout << "Camera Thread: " << key << std::endl << std::flush;
 
         // Save prvious frame loop
         while (true) {

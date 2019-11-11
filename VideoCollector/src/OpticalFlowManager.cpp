@@ -32,16 +32,17 @@ std::tuple<float, float> OpticalFlowManager::calcFlowMagnitude(const cv::cuda::G
         static_cast<float>(stdVal.at<double>(0)));
 }
 
-void OpticalFlowManager::startOpticalFlow(std::mutex &threadLockMutex, cv::cuda::GpuMat &prvsLeftGpuMat, cv::cuda::GpuMat &prvsRightGpuMat, cv::cuda::GpuMat &nextLeftGpuMat, cv::cuda::GpuMat &nextRightGpuMat) {
+void OpticalFlowManager::startOpticalFlow(std::mutex &threadLockMutex, cv::cuda::GpuMat &prvsLeftGpuMat, cv::cuda::GpuMat &prvsRightGpuMat, cv::cuda::GpuMat &nextLeftGpuMat, cv::cuda::GpuMat &nextRightGpuMat, char &key) {
     cv::cuda::GpuMat grayPrvsLeftGpuMat, grayPrvsRightGpuMat;
     cv::cuda::GpuMat grayNextLeftGpuMat, grayNextRightGpuMat;
 
     cv::cuda::GpuMat resizedPrvsLeftGpuMat, resizedPrvsRightGpuMat;
     cv::cuda::GpuMat resizedNextLeftGpuMat, resizedNextRightGpuMat;
 
-    while(true) {
+    while(key != 'q') {
         threadLockMutex.lock();
         //std::cout << "\tOptical Thread." << std::endl << std::flush;
+        std::cout << "\tOptical Thread: " << key << std::endl << std::flush;
         
         std::cout << prvsLeftGpuMat.empty() << prvsRightGpuMat.empty() << nextLeftGpuMat.empty() << nextRightGpuMat.empty() << std::endl;
 
@@ -70,9 +71,9 @@ void OpticalFlowManager::startOpticalFlow(std::mutex &threadLockMutex, cv::cuda:
             
             const double timeSec = (cv::getTickCount() - start) / cv::getTickFrequency();
 
-            std::fprintf(stdout, "FlowCalc time : %lf sec\t", timeSec);
+            //std::fprintf(stdout, "FlowCalc time : %lf sec\t", timeSec);
             //std::cout << "FlowCalc time: "<< timeSec << "sec\n" << std::flush;
-            std::fprintf(stdout, "Maen: %f, Std: %f\n", lMean, lStd);
+            //std::fprintf(stdout, "Maen: %f, Std: %f\n", lMean, lStd);
         }
         
         

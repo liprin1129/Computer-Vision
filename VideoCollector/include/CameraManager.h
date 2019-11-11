@@ -57,11 +57,15 @@ class CameraManager {
             std::lock_guard<std::mutex> gaurd(threadLockMutex);
             return _cvRightGpuMat;
         }; */
+        cv::Size getImageFrameCvSize() {
+            auto res = _zed.getResolution();
+            return cv::Size(res.width, res.height);
+        }
 
         // Open the camera
         void openCamera();
         
-        void getOneFrameFromZED(std::mutex &threadLockMutex, cv::cuda::GpuMat &prvsLeftGpuMat, cv::cuda::GpuMat &prvsRightGpuMat, cv::cuda::GpuMat &nextLeftGpuMat, cv::cuda::GpuMat &nextRightGpuMat);
+        void getOneFrameFromZED(std::mutex &threadLockMutex, cv::cuda::GpuMat &prvsLeftGpuMat, cv::cuda::GpuMat &prvsRightGpuMat, cv::cuda::GpuMat &nextLeftGpuMat, cv::cuda::GpuMat &nextRightGpuMat, char &key);
         void startCollectingFramesForMultiThread();
 
         //void displayFrames();

@@ -18,7 +18,7 @@ class OpticalFlowManager {
         OpticalFlowManager();
         ~OpticalFlowManager();
 
-        void startOpticalFlow(std::mutex &threadLockMutex, cv::cuda::GpuMat &prvsLeftGpuMat, cv::cuda::GpuMat &prvsRightGpuMat, cv::cuda::GpuMat &nextLeftGpuMat, cv::cuda::GpuMat &nextRightGpuMat);
+        void startOpticalFlow(std::mutex &threadLockMutex, cv::cuda::GpuMat &prvsLeftGpuMat, cv::cuda::GpuMat &prvsRightGpuMat, cv::cuda::GpuMat &nextLeftGpuMat, cv::cuda::GpuMat &nextRightGpuMat, char &key);
         
         std::tuple<float, float> calcFlowMagnitude(const cv::cuda::GpuMat& d_flow);
 
