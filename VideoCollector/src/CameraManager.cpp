@@ -24,7 +24,8 @@ CameraManager::~CameraManager()
 // Set configuration parameters
 void CameraManager::initParams()
 {
-    _init_params.camera_resolution = sl::RESOLUTION_HD1080;
+    _init_params.camera_resolution = sl::RESOLUTION_HD720;
+    //_init_params.camera_resolution = sl::RESOLUTION_HD1080;
     //_init_params.camera_resolution = sl::RESOLUTION_HD2K;
     _init_params.depth_mode = sl::DEPTH_MODE_NONE;
     _init_params.camera_disable_imu = true; // disable imu of ZED
@@ -72,12 +73,13 @@ cv::cuda::GpuMat CameraManager::slMatToCvMatConverterForGPU(sl::Mat &slMat) {
                 slMat.getPtr<sl::uchar1>(sl::MEM_GPU), slMat.getStepBytes(sl::MEM_GPU));
 }
 
+/*
 void CameraManager::getOneFrameFromZED(std::mutex &threadLockMutex, cv::cuda::GpuMat &prvsLeftGpuMat, cv::cuda::GpuMat &prvsRightGpuMat, cv::cuda::GpuMat &nextLeftGpuMat, cv::cuda::GpuMat &nextRightGpuMat, char &key)
 {   
     while (key != 'q') {
         threadLockMutex.lock();
         //std::cout << "Camera Thread." << std::endl << std::flush;
-        std::cout << "Camera Thread: " << key << std::endl << std::flush;
+        //std::cout << "Camera Thread: " << key << std::endl << std::flush;
 
         // Save prvious frame loop
         while (true) {
@@ -102,6 +104,7 @@ void CameraManager::getOneFrameFromZED(std::mutex &threadLockMutex, cv::cuda::Gp
                 cv::cuda::cvtColor(rightGpuMat, prvsRightGpuMat, cv::COLOR_BGRA2BGR);
 
                 //std::cout << "Previous Saved!" << std::endl;
+                //cv::imshow("OriginRightView", prvsRightGpuMat);
                 break;
             }
         }
@@ -139,6 +142,36 @@ void CameraManager::getOneFrameFromZED(std::mutex &threadLockMutex, cv::cuda::Gp
         //std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
+*/
+
+void CameraManager::getOneFrameFromZED(std::mutex &threadLockMutex, cv::cuda::GpuMat &cvLeftGpuMat, cv::cuda::GpuMat &cvRightGpuMat, char &key, sl::ERROR_CODE &grabErrorCode) {
+    while (key != 'q') {
+        threadLockMutex.lock();
+
+        if (_zed.grab(_runtime_parameters) == sl::SUCCESS){
+            //std::cout << "Camera Thread: " << key << std::endl << std::flush;
+
+            _zed.retrieveImage(_zedLeftMat, sl::VIEW_LEFT, sl::MEM_GPU);
+            _zed.retrieveImage(_zedRightMat, sl::VIEW_RIGHT, sl::MEM_GPU);
+
+            cv::cuda::GpuMat leftGpuMat = slMatToCvMatConverterForGPU(_zedLeftMat);
+            cv::cuda::GpuMat rightGpuMat = slMatToCvMatConverterForGPU(_zedRightMat);
+
+            cv::cuda::cvtColor(leftGpuMat, cvLeftGpuMat, cv::COLOR_BGRA2BGR);
+            cv::cuda::cvtColor(rightGpuMat, cvRightGpuMat, cv::COLOR_BGRA2BGR);
+
+            grabErrorCode = sl::SUCCESS;
+        }
+        else {
+            grabErrorCode = sl::ERROR_CODE_FAILURE;
+        }
+
+        threadLockMutex.unlock();
+        //std::this_thread::sleep_for(std::chrono::microseconds(1));
+        std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+    }
+}
+
 
 void CameraManager::startCollectingFramesForMultiThread() {
     openCamera(); // Open the camera

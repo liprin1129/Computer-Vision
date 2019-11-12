@@ -6,6 +6,11 @@
 class VideoWriter {
     private:
         cv::VideoWriter vw;
+        cv::Mat originCpuMat;
+        
+        int fileCount;
+        bool recording;
+        std::string toSavePath;
 
     public:
         VideoWriter();
@@ -13,5 +18,6 @@ class VideoWriter {
         void writeFramesToVideoFormat(
             std::mutex &threadLockMutex, char &key,
             std::string fileName, int numFrames, cv::Size frameSize, 
-            cv::cuda::GpuMat &originGpuMat);
+            cv::cuda::GpuMat &originGpuMat,
+            int &numOfFiles, bool &opticalFlowDetectedFlag);
 };

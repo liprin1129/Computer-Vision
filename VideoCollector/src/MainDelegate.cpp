@@ -2,39 +2,74 @@
 
 MainDelegate::MainDelegate() {
     userInputKey = ' ';
+    fileCount = 0;
+    opticalFlowDetectedFlag = false;
+
+}
+
+void displayGpuMat(std::mutex &threadLockMutex, cv::cuda::GpuMat &gpuMat, char &key) {
+    cv::namedWindow("OriginRightView", cv::WINDOW_OPENGL);
+
+    while(key!='q') {
+        threadLockMutex.lock();
+        
+        if (!gpuMat.empty()) {
+            cv::imshow("OriginRightView", gpuMat);
+            //std::fprintf(stdout, "Dispaly call\n");
+
+            //key = cv::waitKey(30);
+        }
+        threadLockMutex.unlock();
+        std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+    }
+
+    cv::destroyWindow("OriginRightView");
 }
 
 int MainDelegate::mainDelegation(int argc, char** argv){
     std::fprintf(stdout, "Hello World\n");
     
-    //cv::namedWindow("OriginLeftView", cv::WINDOW_OPENGL);
-    //cv::namedWindow("OriginRightView", cv::WINDOW_OPENGL);
-    
     std::shared_ptr<CameraManager> cm(new CameraManager);
     std::shared_ptr<OpticalFlowManager> ofm(new OpticalFlowManager);
     std::shared_ptr<InterruptManager> im(new InterruptManager);
     std::shared_ptr<VideoWriter> vw(new VideoWriter);
-
+    std::shared_ptr<DirectoryAndFileManager> dfm(new DirectoryAndFileManager);
     cm->openCamera();
 
-    // Camera thread    
-    std::thread getFrames(&CameraManager::getOneFrameFromZED, cm, std::ref(threadLockMutex), std::ref(_prvsLeftGpuMat), std::ref(_prvsRightGpuMat), std::ref(_nextLeftGpuMat), std::ref(_nextRightGpuMat), std::ref(userInputKey));
+    // Check how many video files are in a directory and save the count to fileCount variable
+    dfm->lookupDirectory("/DATASETs/OpticalFlow-Motion-Dataset/", std::ref(fileCount));
+
+    // Camera thread
+    std::thread getFrames(
+        &CameraManager::getOneFrameFromZED, cm, 
+        std::ref(threadLockMutex), 
+        std::ref(_cvLeftGpuMat), std::ref(_cvRightGpuMat), 
+        std::ref(userInputKey), std::ref(grabErrorCode));
+    
     // Optical flow thread
-    std::thread optCalc(&OpticalFlowManager::startOpticalFlow, ofm, std::ref(threadLockMutex), std::ref(_prvsLeftGpuMat), std::ref(_prvsRightGpuMat), std::ref(_nextLeftGpuMat), std::ref(_nextRightGpuMat), std::ref(userInputKey));
+    std::thread optCalc(
+        &OpticalFlowManager::startOpticalFlow, ofm, 
+        std::ref(threadLockMutex), 
+        std::ref(_cvLeftGpuMat), std::ref(_cvRightGpuMat), 
+        std::ref(userInputKey), std::ref(opticalFlowDetectedFlag), std::ref(grabErrorCode),
+        10);
+    
     // Keyboard interrupt thread
     std::thread interruptCall(&InterruptManager::keyInputInterrupt, im, std::ref(threadLockMutex), std::ref(userInputKey));
+    
     // Video writer thread
-    //cv::Size imgSize = cm->getImageFrameCvSize();
-    std::thread videoWriter(&VideoWriter::writeFramesToVideoFormat, vw, std::ref(threadLockMutex), std::ref(userInputKey), "./output.avi", 10, cm->getImageFrameCvSize(), std::ref(_prvsLeftGpuMat));
-
+    std::thread videoWriter(
+        &VideoWriter::writeFramesToVideoFormat, vw, 
+        std::ref(threadLockMutex), std::ref(userInputKey), 
+        "/DATASETs/OpticalFlow-Motion-Dataset/", 30, cm->getImageFrameCvSize(), 
+        std::ref(_cvLeftGpuMat), 
+        std::ref(fileCount), std::ref(opticalFlowDetectedFlag));
+    
+    std::thread displayFrame(displayGpuMat, std::ref(threadLockMutex), std::ref(_cvRightGpuMat), std::ref(userInputKey));
+    
     getFrames.join();
     optCalc.join();
     interruptCall.join();
+    displayFrame.join();
     videoWriter.join();
-    
-    //userInput.join();
-    //optThreadCalc.join();
-    
-    //cv::destroyWindow("OriginLeftView");
-    //cv::destroyWindow("OriginRightView");
 }

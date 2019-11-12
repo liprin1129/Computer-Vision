@@ -65,7 +65,7 @@ class CameraManager {
         // Open the camera
         void openCamera();
         
-        void getOneFrameFromZED(std::mutex &threadLockMutex, cv::cuda::GpuMat &prvsLeftGpuMat, cv::cuda::GpuMat &prvsRightGpuMat, cv::cuda::GpuMat &nextLeftGpuMat, cv::cuda::GpuMat &nextRightGpuMat, char &key);
+        void getOneFrameFromZED(std::mutex &threadLockMutex, cv::cuda::GpuMat &cvLeftGpuMat, cv::cuda::GpuMat &cvRightGpuMat, char &key, sl::ERROR_CODE &grabErrorCode);
         void startCollectingFramesForMultiThread();
 
         //void displayFrames();

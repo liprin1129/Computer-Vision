@@ -7,6 +7,7 @@
 //#include "OpticalFlowManagerThreadSupported.h"
 #include "InterruptManager.h"
 #include "VideoWriter.h"
+#include "DirectoryAndFileManager.h"
 
 #include <mutex> // std::mutex for lock shared variable
 
@@ -23,6 +24,8 @@ class MainDelegate {
         sl::ERROR_CODE grabErrorCode;
 
         char userInputKey;
+        int fileCount;
+        bool opticalFlowDetectedFlag;
 
     public:
         int mainDelegation(int argc, char** argv);
