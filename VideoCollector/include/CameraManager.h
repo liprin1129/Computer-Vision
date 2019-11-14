@@ -24,9 +24,12 @@ class CameraManager {
         sl::RuntimeParameters _runtime_parameters;
         sl::Resolution _image_size;
 
+        int zedCameraFps;
+
         // zed Mat variables
-        sl::Mat _zedLeftMat, _zedRightMat;
-        //sl::Mat _zedRightMat;
+        sl::Mat _zedLeftGpuMat, _zedRightGpuMat;
+
+        cv::cuda::GpuMat _cvLeftGpuMat, _cvRightGpuMat;
 
         //bool displayOK;
         
@@ -61,11 +64,19 @@ class CameraManager {
             auto res = _zed.getResolution();
             return cv::Size(res.width, res.height);
         }
+        int getZedCameraFps() {return zedCameraFps;};
+        sl::Camera &getZed() {return _zed;};
 
         // Open the camera
         void openCamera();
         
-        void getOneFrameFromZED(std::mutex &threadLockMutex, cv::cuda::GpuMat &cvLeftGpuMat, cv::cuda::GpuMat &cvRightGpuMat, char &key, sl::ERROR_CODE &grabErrorCode);
+        void getOneFrameFromZED(
+            std::mutex &threadLockMutex, 
+            cv::cuda::GpuMat &cvLeftGpuMat, cv::cuda::GpuMat &cvRightGpuMat, 
+            std::vector<cv::cuda::GpuMat> &cvLeftGpuMatFrames, std::vector<cv::cuda::GpuMat> &cvRightGpuMatFrames, 
+            char &key, sl::ERROR_CODE &grabErrorCode,
+            int numFrames, bool &isVectorFull);
+
         void startCollectingFramesForMultiThread();
 
         //void displayFrames();

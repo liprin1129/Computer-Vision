@@ -13,11 +13,13 @@
 class OpticalFlowManager {
     private:
         // Vectors containing GpuMats
-        std::vector<cv::cuda::GpuMat> leftGpuMatSequence, rightGpuMatSequence;
+        //std::vector<cv::cuda::GpuMat> leftGpuMatSequence, rightGpuMatSequence;
         
         // Temporal GpuMats
-        cv::cuda::GpuMat grayLeftGpuMat, grayRightGpuMat;
+        cv::cuda::GpuMat grayPrvsLeftGpuMat, grayPrvsRightGpuMat;
+        cv::cuda::GpuMat grayNextLeftGpuMat, grayNextRightGpuMat;
         cv::cuda::GpuMat resizedLeftGpuMat, resizedRightGpuMat;
+        std::vector<cv::cuda::GpuMat> originLeftGpuMat, originRightGpuMat;
 
         // Optical flow instace
         cv::Ptr<cv::cuda::FarnebackOpticalFlow> farn;
@@ -33,9 +35,10 @@ class OpticalFlowManager {
         //void startOpticalFlow(std::mutex &threadLockMutex, cv::cuda::GpuMat &prvsLeftGpuMat, cv::cuda::GpuMat &prvsRightGpuMat, cv::cuda::GpuMat &nextLeftGpuMat, cv::cuda::GpuMat &nextRightGpuMat, char &key, bool &opticalDetectedFlag);
         void startOpticalFlow(
             std::mutex &threadLockMutex, 
-            cv::cuda::GpuMat &cvLeftGpuMat, cv::cuda::GpuMat &cvRightGpuMat, 
+            //cv::cuda::GpuMat &cvLeftGpuMat, cv::cuda::GpuMat &cvRightGpuMat, 
+            std::vector<cv::cuda::GpuMat> &cvLeftGpuMatFrames, std::vector<cv::cuda::GpuMat> &cvRightGpuMatFrames,
             char &key, bool &opticalDetectedFlag, sl::ERROR_CODE &grabErrorCode,
-            int numOfAccumulatedFrames);
+            int numOfAccumulatedFrames, bool &isVectorFull, int &fileCount);
 
         std::tuple<float, float> calcFlowMeanAndStd(const cv::cuda::GpuMat& d_flow);
         std::tuple<float, float> calcFlowMinMax(const cv::cuda::GpuMat& d_flow);

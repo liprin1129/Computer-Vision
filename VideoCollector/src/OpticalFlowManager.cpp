@@ -113,76 +113,90 @@ void OpticalFlowManager::startOpticalFlow(std::mutex &threadLockMutex, cv::cuda:
 
 void OpticalFlowManager::startOpticalFlow(
     std::mutex &threadLockMutex, 
-    cv::cuda::GpuMat &cvLeftGpuMat, cv::cuda::GpuMat &cvRightGpuMat, 
+    //cv::cuda::GpuMat &cvLeftGpuMat, cv::cuda::GpuMat &cvRightGpuMat, 
+    std::vector<cv::cuda::GpuMat> &cvLeftGpuMatFrames, std::vector<cv::cuda::GpuMat> &cvRightGpuMatFrames,
     char &key, bool &opticalDetectedFlag, sl::ERROR_CODE &grabErrorCode,
-    int numOfAccumulatedFrames) {
+    int numOfAccumulatedFrames, bool &isVectorFull, int &fileCount) {
 
     //std::vector<cv::cuda::GpuMat> leftGpuMatSequence(numOfAccumulatedFrames), rightGpuMatSequence(numOfAccumulatedFrames);
     int vectorCounter = 0;
     int boolCounter = 0;
+    bool recording = false;
 
     //cv::cuda::GpuMat leftGpuMatSequence[numOfAccumulatedFrames], rightGpuMatSequence[numOfAccumulatedFrames];
 
     while (key!='q') {
+        const int64 start = cv::getTickCount();
+
         threadLockMutex.lock();
-        if (grabErrorCode == sl::SUCCESS and !cvLeftGpuMat.empty() and !cvRightGpuMat.empty()) {
-            if (leftGpuMatSequence.size() < numOfAccumulatedFrames and rightGpuMatSequence.size() < numOfAccumulatedFrames) {
-                cv::cuda::cvtColor(cvLeftGpuMat, grayLeftGpuMat, cv::COLOR_BGR2GRAY);
-                cv::cuda::cvtColor(cvRightGpuMat, grayRightGpuMat, cv::COLOR_BGR2GRAY);
+        //std::cout << "\t[Optic]\n";
+        
+        if (isVectorFull == true) {
+            // std::cout << "\t[Optic] FULL\n";
+            originLeftGpuMat.assign(cvLeftGpuMatFrames.begin(), cvLeftGpuMatFrames.end());
+            originRightGpuMat.assign(cvRightGpuMatFrames.begin(), cvRightGpuMatFrames.end());
 
-                cv::cuda::resize(grayLeftGpuMat, resizedLeftGpuMat, cv::Size(480, 270));
-                cv::cuda::resize(grayRightGpuMat, resizedRightGpuMat, cv::Size(480, 270));
+            //cvLeftGpuMatFrames.clear();
+            //cvRightGpuMatFrames.clear();
 
-                //std::fprintf(stdout, "Vector size: %d, %d\n", static_cast<int>(leftGpuMatSequence.size()), static_cast<int>(rightGpuMatSequence.size()));
-                
-                leftGpuMatSequence.push_back(resizedLeftGpuMat.clone());
-                rightGpuMatSequence.push_back(resizedRightGpuMat.clone());
-            }
-
-            if (leftGpuMatSequence.size() >= numOfAccumulatedFrames and rightGpuMatSequence.size() >= numOfAccumulatedFrames) {
-                farn->calc(leftGpuMatSequence[0], leftGpuMatSequence[numOfAccumulatedFrames-1], _flowLeftGpuMat);
-                farn->calc(rightGpuMatSequence[0], rightGpuMatSequence[numOfAccumulatedFrames-1], _flowRightGpuMat);
-                
-                // Clear the vectors
-                leftGpuMatSequence.clear(); rightGpuMatSequence.clear();
-                std::cout << "\tClear!\n";
-
-                auto [lMean, lStd] = calcFlowMeanAndStd(_flowLeftGpuMat);
-                auto [rMean, rStd] = calcFlowMeanAndStd(_flowRightGpuMat);
-                
-                auto [lMin, lMax] = calcFlowMinMax(_flowLeftGpuMat);
-                auto [rMin, rMax] = calcFlowMinMax(_flowRightGpuMat);
-                std::fprintf(stdout, "lMean: %f, Std: %f, rMean: %f, Std: %f\n", lMean, lStd, rMean, rStd);
-                std::fprintf(stdout, "lMin: %f, lMax: %f, rMin: %f, rMax: %f\n\n", lMin, lMax, rMin, rMax);
-
-                if (lMean > 1.0 and rMean > 1.0) {
-                    opticalDetectedFlag = true;
-                } else {
-                    opticalDetectedFlag = false;
-                }
-            }
-
-            //testMat = cvLeftGpuMat;
-            
-            /*
-            std::fprintf(stdout, "Vector size: %d\n", static_cast<int>(gpuMatSequence.size()));
-            if (gpuMatSequence.size() < frameRate) {
-                gpuMatSequence.push_back(cvLeftGpuMat);
-                //cvLeftGpuMat.release();
-            }
-
-            else {
-                break;
-            }*/
+            //isVectorFull = false;
+            //key = 'q';
         }
 
+        //std::cout << "\t[Optic ] vector size: " << originLeftGpuMat.size() << " : " << originRightGpuMat.size() << std::endl;
+        
         threadLockMutex.unlock();
-        std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+        if (originLeftGpuMat.size() >= numOfAccumulatedFrames or originRightGpuMat.size() >= numOfAccumulatedFrames) {
+            // std::cout << "\t[Optic] \tStart\n";
+
+            cv::cuda::cvtColor(originLeftGpuMat[0], grayPrvsLeftGpuMat, cv::COLOR_BGR2GRAY);
+            cv::cuda::cvtColor(originRightGpuMat[0], grayPrvsRightGpuMat, cv::COLOR_BGR2GRAY);
+
+            cv::cuda::cvtColor(originLeftGpuMat[numOfAccumulatedFrames-1], grayNextLeftGpuMat, cv::COLOR_BGR2GRAY);
+            cv::cuda::cvtColor(originRightGpuMat[numOfAccumulatedFrames-1], grayNextRightGpuMat, cv::COLOR_BGR2GRAY);
+
+            // Calculate optical flow
+            farn->calc(grayPrvsLeftGpuMat, grayNextLeftGpuMat, _flowLeftGpuMat);
+            farn->calc(grayPrvsRightGpuMat, grayNextRightGpuMat, _flowRightGpuMat);
+
+            auto [lMean, lStd] = calcFlowMeanAndStd(_flowLeftGpuMat);
+            auto [rMean, rStd] = calcFlowMeanAndStd(_flowRightGpuMat);
+            
+            auto [lMin, lMax] = calcFlowMinMax(_flowLeftGpuMat);
+            auto [rMin, rMax] = calcFlowMinMax(_flowRightGpuMat);
+            
+            threadLockMutex.lock();
+
+            if (lMean > 1 or rMean > 1) {
+                opticalDetectedFlag = true;
+                // std::cout << "\t[Optic] Optical flow detected!\n";
+
+                //threadLockMutex.unlock();
+                //std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                recording = true;
+            } else {
+                //threadLockMutex.unlock();
+                //std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                if (recording == true) {
+                    fileCount ++;
+                    recording = false;
+                }
+                opticalDetectedFlag = false;
+                // std::cout << "\t[Optic] Optical No!\n";
+
+                //threadLockMutex.unlock();
+                //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+
+            threadLockMutex.unlock();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+            originLeftGpuMat.clear();
+            originRightGpuMat.clear();
+        }
     }
-    //testMat.release();
-    std::cout << *cvLeftGpuMat.refcount << std::endl;
-    
-    key = 'q';
 }
 
 void OpticalFlowManager::calcOpticalFlowGPU(cv::cuda::GpuMat &prvsGpuMat, cv::cuda::GpuMat &nextGpuMat, cv::cuda::GpuMat &xyVelocityGpuMat) {

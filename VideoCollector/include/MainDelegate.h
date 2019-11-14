@@ -15,7 +15,10 @@ class MainDelegate {
     private:
         std::mutex threadLockMutex; // global variable for mutex
 
+        cv::Mat _cvLeftMat, _cvRightMat;
         cv::cuda::GpuMat _cvLeftGpuMat, _cvRightGpuMat;
+        std::vector<cv::cuda::GpuMat> _cvLeftGpuMatFrames;
+        std::vector<cv::cuda::GpuMat> _cvRightGpuMatFrames;
 
         cv::cuda::GpuMat _prvsLeftGpuMat, _nextLeftGpuMat;
         cv::cuda::GpuMat _prvsRightGpuMat, _nextRightGpuMat;
@@ -25,7 +28,7 @@ class MainDelegate {
 
         char userInputKey;
         int fileCount;
-        bool opticalFlowDetectedFlag;
+        bool opticalFlowDetectedFlag, isVectorFull;
 
     public:
         int mainDelegation(int argc, char** argv);
