@@ -40,7 +40,7 @@ int MainDelegate::mainDelegation(int argc, char** argv){
     // Check how many video files are in a directory and save the count to fileCount variable
     dfm->lookupDirectory("/DATASETs/OpticalFlow-Motion-Dataset/", std::ref(fileCount));
 
-    // Camera thread
+    /*// Camera thread
     std::thread getFrames(
         &CameraManager::getOneFrameFromZED, cm, 
         std::ref(threadLockMutex), 
@@ -48,7 +48,7 @@ int MainDelegate::mainDelegation(int argc, char** argv){
         std::ref(_cvLeftGpuMatFrames), std::ref(_cvRightGpuMatFrames),
         std::ref(userInputKey), std::ref(grabErrorCode),
         cm->getZedCameraFps(), std::ref(isVectorFull));
-    
+
     // Optical flow thread
     fileCount ++;
     std::thread optCalc(
@@ -57,6 +57,16 @@ int MainDelegate::mainDelegation(int argc, char** argv){
         std::ref(_cvLeftGpuMatFrames), std::ref(_cvRightGpuMatFrames), 
         std::ref(userInputKey), std::ref(opticalFlowDetectedFlag), std::ref(grabErrorCode),
         cm->getZedCameraFps(), std::ref(isVectorFull), std::ref(fileCount));
+        
+    */
+    
+    std::thread getFrames(
+        &CameraManager::getSideBySizeFrameFromZED, cm, 
+        std::ref(threadLockMutex), 
+        std::ref(_cvSideBySideGpuMat), 
+        std::ref(_cvSideBySideGpuMatFrames),
+        std::ref(userInputKey), std::ref(grabErrorCode),
+        cm->getZedCameraFps(), std::ref(isVectorFull));
     
     // Keyboard interrupt thread
     std::thread interruptCall(&InterruptManager::keyInputInterrupt, im, std::ref(threadLockMutex), std::ref(userInputKey));

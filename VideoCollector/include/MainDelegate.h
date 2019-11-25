@@ -16,12 +16,12 @@ class MainDelegate {
         std::mutex threadLockMutex; // global variable for mutex
 
         cv::Mat _cvLeftMat, _cvRightMat;
-        cv::cuda::GpuMat _cvLeftGpuMat, _cvRightGpuMat;
-        std::vector<cv::cuda::GpuMat> _cvLeftGpuMatFrames;
-        std::vector<cv::cuda::GpuMat> _cvRightGpuMatFrames;
+        cv::cuda::GpuMat _cvLeftGpuMat, _cvRightGpuMat, _cvSideBySideGpuMat;
+        std::vector<cv::cuda::GpuMat> _cvLeftGpuMatFrames, _cvRightGpuMatFrames, _cvSideBySideGpuMatFrames;
 
         cv::cuda::GpuMat _prvsLeftGpuMat, _nextLeftGpuMat;
         cv::cuda::GpuMat _prvsRightGpuMat, _nextRightGpuMat;
+        cv::cuda::GpuMat _prvsSideBySideGpuMat, _nextSideBySideGpuMat;
         cv::cuda::GpuMat _flowGpuMat;
 
         sl::ERROR_CODE grabErrorCode;

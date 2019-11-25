@@ -179,6 +179,83 @@ void CameraManager::getOneFrameFromZED(
         //_zed.disableRecording();
 }
 
+void CameraManager::getSideBySizeFrameFromZED(
+    std::mutex &threadLockMutex, 
+    cv::cuda::GpuMat &cvSideBySideGpuMat,
+    std::vector<cv::cuda::GpuMat> &cvSideBySideGpuMatFrames,
+    char &key, sl::ERROR_CODE &grabErrorCode,
+    int numFrames, bool &isVectorFull) 
+    {   
+        std::vector<cv::cuda::GpuMat> sideBySideFrames;
+
+        while (key != 'q') {
+            const int64 start = cv::getTickCount();
+            
+            if (_zed.grab(_runtime_parameters) == sl::SUCCESS){
+
+                //std::cout << "Camera Thread: " << key << std::endl << std::flush;
+
+                _zed.retrieveImage(_zedSideBySideGpuMat, sl::VIEW_SIDE_BY_SIDE, sl::MEM_GPU);
+
+                cv::cuda::cvtColor(slMatToCvMatConverterForGPU(_zedSideBySideGpuMat), _cvSideBySideGpuMat, cv::COLOR_BGRA2BGR);
+
+                // Lock
+                // threadLockMutex.lock();
+                
+                cvSideBySideGpuMat = _cvSideBySideGpuMat.clone();
+
+                // Unlock
+                // threadLockMutex.unlock();
+                // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                
+                grabErrorCode = sl::SUCCESS;
+
+                // Save frame to match fps
+                sideBySideFrames.push_back(_cvSideBySideGpuMat.clone());
+
+                //std::cout << "[Camera] cvLeftGpuMat refcount: " << *_cvLeftGpuMat.refcount << "\t vector size: " << leftFrames.size() << " : " << rightFrames.size() << std::endl;
+
+                threadLockMutex.lock();
+
+                if (sideBySideFrames.size() >= numFrames) {
+                    // Lock
+                    //threadLockMutex.lock();
+                    // std::cout << "\n[Camera] Vector full!\n";
+
+                    cvSideBySideGpuMatFrames.assign(sideBySideFrames.begin(), sideBySideFrames.end());
+
+                    //std::cout << "[Camera] vector size: " << cvLeftGpuMatFrames.size() << " : " << cvRightGpuMatFrames.size() << std::endl;
+
+                    isVectorFull = true;
+                    
+                    // Unlock
+                    //threadLockMutex.unlock();
+                    // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+                    // Clear vectors
+                    sideBySideFrames.clear();
+                } else {
+                    // threadLockMutex.lock();
+
+                    isVectorFull = false;
+
+                    // threadLockMutex.unlock();
+                    // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
+
+                threadLockMutex.unlock();
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            else {
+                grabErrorCode = sl::ERROR_CODE_FAILURE;
+            }
+
+            const double timeSec = (cv::getTickCount() - start) / cv::getTickFrequency();
+            //std::fprintf(stdout, "CameraManager time : %lf sec\n", timeSec);
+        }
+
+        //_zed.disableRecording();
+}
 
 void CameraManager::startCollectingFramesForMultiThread() {
     openCamera(); // Open the camera

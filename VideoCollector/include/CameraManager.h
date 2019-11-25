@@ -27,9 +27,9 @@ class CameraManager {
         int zedCameraFps;
 
         // zed Mat variables
-        sl::Mat _zedLeftGpuMat, _zedRightGpuMat;
+        sl::Mat _zedLeftGpuMat, _zedRightGpuMat, _zedSideBySideGpuMat;
 
-        cv::cuda::GpuMat _cvLeftGpuMat, _cvRightGpuMat;
+        cv::cuda::GpuMat _cvLeftGpuMat, _cvRightGpuMat, _cvSideBySideGpuMat;
 
         //bool displayOK;
         
@@ -74,6 +74,13 @@ class CameraManager {
             std::mutex &threadLockMutex, 
             cv::cuda::GpuMat &cvLeftGpuMat, cv::cuda::GpuMat &cvRightGpuMat, 
             std::vector<cv::cuda::GpuMat> &cvLeftGpuMatFrames, std::vector<cv::cuda::GpuMat> &cvRightGpuMatFrames, 
+            char &key, sl::ERROR_CODE &grabErrorCode,
+            int numFrames, bool &isVectorFull);
+
+        void CameraManager::getSideBySizeFrameFromZED(
+            std::mutex &threadLockMutex, 
+            cv::cuda::GpuMat &cvSideBySideGpuMat, 
+            std::vector<cv::cuda::GpuMat> &cvSideBySideGpuMatFrames,
             char &key, sl::ERROR_CODE &grabErrorCode,
             int numFrames, bool &isVectorFull);
 
