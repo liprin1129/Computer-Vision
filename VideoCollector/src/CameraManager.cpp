@@ -16,8 +16,9 @@ CameraManager::CameraManager() {
 
 CameraManager::~CameraManager()
 {   
-    _zedLeftGpuMat.free();
-    _zedRightGpuMat.free();
+    if (_zedLeftGpuMat.isInit()) {_zedLeftGpuMat.free();};
+    if (_zedRightGpuMat.isInit()) {_zedRightGpuMat.free();};
+    if (_zedSideBySideGpuMat.isInit()) {_zedSideBySideGpuMat.free();};
     
     _zed.close();
     std::cout << "Camera has Closed" << std::endl;
@@ -189,12 +190,11 @@ void CameraManager::getSideBySizeFrameFromZED(
         std::vector<cv::cuda::GpuMat> sideBySideFrames;
 
         while (key != 'q') {
-            const int64 start = cv::getTickCount();
+            //const int64 start = cv::getTickCount();
             
             if (_zed.grab(_runtime_parameters) == sl::SUCCESS){
-
+                _zed.record();
                 //std::cout << "Camera Thread: " << key << std::endl << std::flush;
-
                 _zed.retrieveImage(_zedSideBySideGpuMat, sl::VIEW_SIDE_BY_SIDE, sl::MEM_GPU);
 
                 cv::cuda::cvtColor(slMatToCvMatConverterForGPU(_zedSideBySideGpuMat), _cvSideBySideGpuMat, cv::COLOR_BGRA2BGR);
@@ -202,7 +202,7 @@ void CameraManager::getSideBySizeFrameFromZED(
                 // Lock
                 // threadLockMutex.lock();
                 
-                cvSideBySideGpuMat = _cvSideBySideGpuMat.clone();
+                //cvSideBySideGpuMat = _cvSideBySideGpuMat.clone();
 
                 // Unlock
                 // threadLockMutex.unlock();
@@ -212,7 +212,6 @@ void CameraManager::getSideBySizeFrameFromZED(
 
                 // Save frame to match fps
                 sideBySideFrames.push_back(_cvSideBySideGpuMat.clone());
-
                 //std::cout << "[Camera] cvLeftGpuMat refcount: " << *_cvLeftGpuMat.refcount << "\t vector size: " << leftFrames.size() << " : " << rightFrames.size() << std::endl;
 
                 threadLockMutex.lock();
@@ -245,12 +244,13 @@ void CameraManager::getSideBySizeFrameFromZED(
 
                 threadLockMutex.unlock();
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                //std::this_thread::sleep_for(std::chrono::microseconds(100));
             }
             else {
                 grabErrorCode = sl::ERROR_CODE_FAILURE;
             }
 
-            const double timeSec = (cv::getTickCount() - start) / cv::getTickFrequency();
+            //const double timeSec = (cv::getTickCount() - start) / cv::getTickFrequency();
             //std::fprintf(stdout, "CameraManager time : %lf sec\n", timeSec);
         }
 

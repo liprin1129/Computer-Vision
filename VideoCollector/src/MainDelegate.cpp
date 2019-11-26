@@ -9,6 +9,12 @@ MainDelegate::MainDelegate() {
 
 void displayGpuMat(std::mutex &threadLockMutex, cv::cuda::GpuMat &gpuMat, char &key) {
     cv::namedWindow("OriginRightView", cv::WINDOW_OPENGL);
+    if (gpuMat.size().width > gpuMat.size().height*2) { // If image frame is a SideBySide case
+        cv::resizeWindow("OriginRightView", gpuMat.size().width/2, gpuMat.size().height/2);
+    }
+    else {
+        cv::resizeWindow("OriginRightView", gpuMat.size().width, gpuMat.size().height);
+    }
 
     while(key!='q') {
         threadLockMutex.lock();
@@ -57,20 +63,7 @@ int MainDelegate::mainDelegation(int argc, char** argv){
         std::ref(_cvLeftGpuMatFrames), std::ref(_cvRightGpuMatFrames), 
         std::ref(userInputKey), std::ref(opticalFlowDetectedFlag), std::ref(grabErrorCode),
         cm->getZedCameraFps(), std::ref(isVectorFull), std::ref(fileCount));
-        
-    */
-    
-    std::thread getFrames(
-        &CameraManager::getSideBySizeFrameFromZED, cm, 
-        std::ref(threadLockMutex), 
-        std::ref(_cvSideBySideGpuMat), 
-        std::ref(_cvSideBySideGpuMatFrames),
-        std::ref(userInputKey), std::ref(grabErrorCode),
-        cm->getZedCameraFps(), std::ref(isVectorFull));
-    
-    // Keyboard interrupt thread
-    std::thread interruptCall(&InterruptManager::keyInputInterrupt, im, std::ref(threadLockMutex), std::ref(userInputKey));
-    
+
     // Video writer thread
     std::thread videoWriter(
         &VideoWriter::writeCvGpuFramesToVideoFormat, vw, 
@@ -80,8 +73,48 @@ int MainDelegate::mainDelegation(int argc, char** argv){
         std::ref(fileCount), std::ref(opticalFlowDetectedFlag), std::ref(isVectorFull));
 
     // Display trhead
-    std::thread displayFrame(displayGpuMat, std::ref(threadLockMutex), std::ref(_cvRightGpuMat), std::ref(userInputKey));
+    //std::thread displayFrame(displayGpuMat, std::ref(threadLockMutex), std::ref(_cvRightGpuMat), std::ref(userInputKey));        
+    */
     
+    std::thread getFrames(
+        &CameraManager::getSideBySizeFrameFromZED, cm, 
+        std::ref(threadLockMutex), 
+        std::ref(_cvSideBySideGpuMat), 
+        std::ref(_cvSideBySideGpuMatFrames),
+        std::ref(userInputKey), std::ref(grabErrorCode),
+        cm->getZedCameraFps(), std::ref(isVectorFull));
+
+    // Optical flow thread
+    fileCount ++;
+    std::thread optCalc(
+        &OpticalFlowManager::startSideBySideOpticalFlow, ofm, 
+        std::ref(threadLockMutex), 
+        std::ref(_cvSideBySideGpuMatFrames), 
+        std::ref(userInputKey), std::ref(opticalFlowDetectedFlag), std::ref(grabErrorCode),
+        cm->getZedCameraFps(), std::ref(isVectorFull), std::ref(fileCount));
+
+    // Video writer thread
+    std::thread videoWriter(
+        &VideoWriter::writeSideBySideCvGpuFramesToVideoFormat, vw, 
+        std::ref(threadLockMutex), std::ref(userInputKey), 
+        "/DATASETs/OpticalFlow-Motion-Dataset/", cm->getZedCameraFps(), cm->getSideBySideImageFrameCvSize(), 
+        std::ref(_cvSideBySideGpuMatFrames), 
+        std::ref(fileCount), std::ref(opticalFlowDetectedFlag), std::ref(isVectorFull));
+
+    /*std::thread videoWriter(
+        &VideoWriter::writeCvGpuFramesToVideoFormat, vw, 
+        std::ref(threadLockMutex), std::ref(userInputKey), 
+        "/DATASETs/OpticalFlow-Motion-Dataset/", cm->getZedCameraFps(), cm->getImageFrameCvSize(), 
+        std::ref(_cvSideBySideGpuMatFrames), std::ref(_cvSideBySideGpuMatFrames), 
+        std::ref(fileCount), std::ref(opticalFlowDetectedFlag), std::ref(isVectorFull));*/
+
+    // Display trhead
+    //std::thread displayFrame(displayGpuMat, std::ref(threadLockMutex), std::ref(_cvRightGpuMat), std::ref(userInputKey));
+    std::thread displayFrame(displayGpuMat, std::ref(threadLockMutex), std::ref(_cvSideBySideGpuMat), std::ref(userInputKey));
+    
+    // Keyboard interrupt thread
+    std::thread interruptCall(&InterruptManager::keyInputInterrupt, im, std::ref(threadLockMutex), std::ref(userInputKey));
+
     getFrames.join();
     optCalc.join();
     interruptCall.join();

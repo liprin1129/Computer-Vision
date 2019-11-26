@@ -8,8 +8,8 @@
 class VideoWriter {
     private:
         cv::VideoWriter vw;
-        cv::Mat originLeftCpuMat;
-        std::vector<cv::cuda::GpuMat> originLeftGpuMat, originRightGpuMat;
+        cv::Mat _originLeftCpuMat, _originSideBySideCpuMat;
+        std::vector<cv::cuda::GpuMat> _originLeftGpuMat, _originRightGpuMat, _originSideBySideGpuMat;
 
         int fileCount;
         bool recording, isOpticTriggered;
@@ -22,6 +22,12 @@ class VideoWriter {
             std::mutex &threadLockMutex, char &key,
             std::string fileName, int numFrames, cv::Size frameSize, 
             std::vector<cv::cuda::GpuMat> &cvLeftGpuMatFrames, std::vector<cv::cuda::GpuMat> &cvRightGpuMatFrames,
+            int &numOfFiles, bool &opticalFlowDetectedFlag, bool &isVectorFull);
+
+        void writeSideBySideCvGpuFramesToVideoFormat(
+            std::mutex &threadLockMutex, char &key,
+            std::string fileName, int numFrames, cv::Size frameSize, 
+            std::vector<cv::cuda::GpuMat> &cvSideBySideGpuMatFrames,
             int &numOfFiles, bool &opticalFlowDetectedFlag, bool &isVectorFull);
 
         void writeSlFramesToVideoFormat(

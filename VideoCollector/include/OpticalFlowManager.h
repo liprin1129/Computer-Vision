@@ -16,15 +16,15 @@ class OpticalFlowManager {
         //std::vector<cv::cuda::GpuMat> leftGpuMatSequence, rightGpuMatSequence;
         
         // Temporal GpuMats
-        cv::cuda::GpuMat grayPrvsLeftGpuMat, grayPrvsRightGpuMat;
-        cv::cuda::GpuMat grayNextLeftGpuMat, grayNextRightGpuMat;
-        cv::cuda::GpuMat resizedLeftGpuMat, resizedRightGpuMat;
-        std::vector<cv::cuda::GpuMat> originLeftGpuMat, originRightGpuMat;
+        cv::cuda::GpuMat _greyPrvsLeftGpuMat, _greyPrvsRightGpuMat, _greyPrvsSideBySideGpuMat;
+        cv::cuda::GpuMat _greyNextLeftGpuMat, _greyNextRightGpuMat, _greyNextSideBySideGpuMat;
+        //cv::cuda::GpuMat _resizedLeftGpuMat, _resizedRightGpuMat, _resizedSideBySideGpuMat;
+        std::vector<cv::cuda::GpuMat> _originLeftGpuMat, _originRightGpuMat, _originSideBySideGpuMat;
 
         // Optical flow instace
         cv::Ptr<cv::cuda::FarnebackOpticalFlow> farn;
         // Optical flow results
-        cv::cuda::GpuMat _flowLeftGpuMat, _flowRightGpuMat;
+        cv::cuda::GpuMat _flowLeftGpuMat, _flowRightGpuMat, _flowSideBySideGpuMat;
 
         void calcOpticalFlowGPU(cv::cuda::GpuMat &prvsGpuMat, cv::cuda::GpuMat &nextGpuMat, cv::cuda::GpuMat &xyVelocityGpuMat);
 
@@ -37,6 +37,13 @@ class OpticalFlowManager {
             std::mutex &threadLockMutex, 
             //cv::cuda::GpuMat &cvLeftGpuMat, cv::cuda::GpuMat &cvRightGpuMat, 
             std::vector<cv::cuda::GpuMat> &cvLeftGpuMatFrames, std::vector<cv::cuda::GpuMat> &cvRightGpuMatFrames,
+            char &key, bool &opticalDetectedFlag, sl::ERROR_CODE &grabErrorCode,
+            int numOfAccumulatedFrames, bool &isVectorFull, int &fileCount);
+
+        void startSideBySideOpticalFlow(
+            std::mutex &threadLockMutex, 
+            //cv::cuda::GpuMat &cvLeftGpuMat, cv::cuda::GpuMat &cvRightGpuMat, 
+            std::vector<cv::cuda::GpuMat> &cvSideBySideGpuMatFrames,
             char &key, bool &opticalDetectedFlag, sl::ERROR_CODE &grabErrorCode,
             int numOfAccumulatedFrames, bool &isVectorFull, int &fileCount);
 

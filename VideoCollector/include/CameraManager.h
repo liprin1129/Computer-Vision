@@ -64,6 +64,12 @@ class CameraManager {
             auto res = _zed.getResolution();
             return cv::Size(res.width, res.height);
         }
+
+        cv::Size getSideBySideImageFrameCvSize() {
+            auto res = _zed.getResolution();
+            return cv::Size(res.width*2, res.height);
+        }
+
         int getZedCameraFps() {return zedCameraFps;};
         sl::Camera &getZed() {return _zed;};
 
@@ -77,7 +83,7 @@ class CameraManager {
             char &key, sl::ERROR_CODE &grabErrorCode,
             int numFrames, bool &isVectorFull);
 
-        void CameraManager::getSideBySizeFrameFromZED(
+        void getSideBySizeFrameFromZED(
             std::mutex &threadLockMutex, 
             cv::cuda::GpuMat &cvSideBySideGpuMat, 
             std::vector<cv::cuda::GpuMat> &cvSideBySideGpuMatFrames,
