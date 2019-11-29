@@ -197,7 +197,7 @@ void CameraManager::getSideBySizeFrameFromZED(
                 //std::cout << "Camera Thread: " << key << std::endl << std::flush;
                 _zed.retrieveImage(_zedSideBySideGpuMat, sl::VIEW_SIDE_BY_SIDE, sl::MEM_GPU);
 
-                cv::cuda::cvtColor(slMatToCvMatConverterForGPU(_zedSideBySideGpuMat), _cvSideBySideGpuMat, cv::COLOR_BGRA2BGR);
+                cv::cuda::cvtColor(slMatToCvMatConverterForGPU(_zedSideBySideGpuMat), cvSideBySideGpuMat, cv::COLOR_BGRA2BGR);
 
                 // Lock
                 // threadLockMutex.lock();
@@ -211,8 +211,8 @@ void CameraManager::getSideBySizeFrameFromZED(
                 grabErrorCode = sl::SUCCESS;
 
                 // Save frame to match fps
-                sideBySideFrames.push_back(_cvSideBySideGpuMat.clone());
-                //std::cout << "[Camera] cvLeftGpuMat refcount: " << *_cvLeftGpuMat.refcount << "\t vector size: " << leftFrames.size() << " : " << rightFrames.size() << std::endl;
+                sideBySideFrames.push_back(cvSideBySideGpuMat.clone());
+                //std::cout << "[Camera] _cvSideBySideGpuMat refcount: " << *cvSideBySideGpuMat.refcount << "\t vector size: " << cvSideBySideGpuMat.size() << std::endl;
 
                 threadLockMutex.lock();
 

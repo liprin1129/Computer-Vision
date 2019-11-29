@@ -19,14 +19,15 @@ void displayGpuMat(std::mutex &threadLockMutex, cv::cuda::GpuMat &gpuMat, char &
     while(key!='q') {
         threadLockMutex.lock();
         
+        //std::cout << gpuMat.size() << std::endl;
+        
         if (!gpuMat.empty()) {
             cv::imshow("OriginRightView", gpuMat);
             //std::fprintf(stdout, "Dispaly call\n");
-
             //key = cv::waitKey(30);
         }
         threadLockMutex.unlock();
-        std::this_thread::sleep_for(std::chrono::nanoseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     cv::destroyWindow("OriginRightView");
@@ -84,6 +85,10 @@ int MainDelegate::mainDelegation(int argc, char** argv){
         std::ref(userInputKey), std::ref(grabErrorCode),
         cm->getZedCameraFps(), std::ref(isVectorFull));
 
+    // Display trhead
+    //std::thread displayFrame(displayGpuMat, std::ref(threadLockMutex), std::ref(_cvRightGpuMat), std::ref(userInputKey));
+    std::thread displayFrame(displayGpuMat, std::ref(threadLockMutex), std::ref(_cvSideBySideGpuMat), std::ref(userInputKey));
+
     // Optical flow thread
     fileCount ++;
     std::thread optCalc(
@@ -107,10 +112,6 @@ int MainDelegate::mainDelegation(int argc, char** argv){
         "/DATASETs/OpticalFlow-Motion-Dataset/", cm->getZedCameraFps(), cm->getImageFrameCvSize(), 
         std::ref(_cvSideBySideGpuMatFrames), std::ref(_cvSideBySideGpuMatFrames), 
         std::ref(fileCount), std::ref(opticalFlowDetectedFlag), std::ref(isVectorFull));*/
-
-    // Display trhead
-    //std::thread displayFrame(displayGpuMat, std::ref(threadLockMutex), std::ref(_cvRightGpuMat), std::ref(userInputKey));
-    std::thread displayFrame(displayGpuMat, std::ref(threadLockMutex), std::ref(_cvSideBySideGpuMat), std::ref(userInputKey));
     
     // Keyboard interrupt thread
     std::thread interruptCall(&InterruptManager::keyInputInterrupt, im, std::ref(threadLockMutex), std::ref(userInputKey));
