@@ -13,7 +13,7 @@ class CameraManager {
         int frameCount;
 
         sl::Mat _sideBySideSlMat;
-        cv::cuda::GpuMat _sideBySideCvGpuMat;
+        cv::cuda::GpuMat _sideBySideCvGpuMatRGBA, _sideBySideCvGpuMat;
 
         std::vector<cv::cuda::GpuMat> _cvSideBySideGpuMatFrames;
 

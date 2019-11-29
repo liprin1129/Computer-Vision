@@ -291,7 +291,9 @@ void OpticalFlowManager::startOpticalFlow(  std::mutex &threadLockMutex,
 
         if (!_cvSideBySideGpuMatFrames.empty()) {
             // Calculate optical flow
-            farn->calc(_cvSideBySideGpuMatFrames[0], _cvSideBySideGpuMatFrames[1], _flowSideBySideGpuMat);
+            cv::cuda::cvtColor(_cvSideBySideGpuMatFrames[0], _greyPrvsSideBySideGpuMat, cv::COLOR_RGB2GRAY);
+            cv::cuda::cvtColor(_cvSideBySideGpuMatFrames[1], _greyNextSideBySideGpuMat, cv::COLOR_RGB2GRAY);
+            farn->calc(_greyPrvsSideBySideGpuMat, _greyNextSideBySideGpuMat, _flowSideBySideGpuMat);
 
             auto [sbsMean, sbsStd] = calcFlowMeanAndStd(_flowSideBySideGpuMat);
             //auto [sbsMin, sbsMax] = calcFlowMinMax(_flowSideBySideGpuMat);

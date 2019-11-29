@@ -31,8 +31,8 @@ CameraManager::~CameraManager() {
  * 
  */
 void CameraManager::initParams() {    
-    _init_params.camera_resolution = sl::RESOLUTION_HD720;
-    //_init_params.camera_resolution = sl::RESOLUTION_HD1080;
+    // _init_params.camera_resolution = sl::RESOLUTION_HD720;
+    _init_params.camera_resolution = sl::RESOLUTION_HD1080;
     //_init_params.camera_resolution = sl::RESOLUTION_HD2K;
     _init_params.depth_mode = sl::DEPTH_MODE_NONE;
     _init_params.camera_disable_imu = true; // disable imu of ZED
@@ -141,9 +141,13 @@ void CameraManager::getSideBySizeFrameFromZED(  std::mutex &threadLockMutex,
     while (key != 'q') {
         if (_zed.grab(_runtime_parameters) == sl::SUCCESS) {
             _zed.retrieveImage(_sideBySideSlMat, sl::VIEW_SIDE_BY_SIDE, sl::MEM_GPU);
-            
-            cv::cuda::cvtColor(slMatToCvMatConverterForGPU(_sideBySideSlMat), _sideBySideCvGpuMat, cv::COLOR_RGBA2GRAY);
-            
+            _sideBySideCvGpuMatRGBA = slMatToCvMatConverterForGPU(_sideBySideSlMat);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+            cv::cuda::cvtColor(_sideBySideCvGpuMatRGBA, _sideBySideCvGpuMat, cv::COLOR_RGBA2RGB);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            // cv::cuda::cvtColor(slMatToCvMatConverterForGPU(_sideBySideSlMat), _sideBySideCvGpuMat, cv::COLOR_RGBA2GRAY);
+
             // FOR DISPLAY
             threadLockMutex.lock();
             sideBySideCvGpuMat = _sideBySideCvGpuMat.clone();
@@ -173,22 +177,24 @@ void CameraManager::getSideBySizeFrameFromZED(  std::mutex &threadLockMutex,
 
             if (isOpticalFlowDetected == true) {
                 if (_fileCount==currentCount) {
-                    std::string saveFile = "/DATASETs/OpticalFlow-Motion-Dataset/" + std::to_string(_fileCount) + ".svo";
+                    std::string saveFile = "/DATASETs/OpticalFlow-Motion-Dataset/" + std::to_string(_fileCount) + ".avi";
                     sl::String pathOutput(saveFile.c_str());
-                    _zed.enableRecording(pathOutput, sl::SVO_COMPRESSION_MODE_LOSSLESS);
+                    // _zed.enableRecording(pathOutput, sl::SVO_COMPRESSION_MODE_LOSSLESS);
+                    vw = cv::VideoWriter(saveFile, CV_FOURCC('H','2','6','4'), zedCameraFps, _sideBySideCvGpuMat.size());
                     ++currentCount;
                 }
 
-                 _zed.record();
+                cv::Mat mat(_sideBySideCvGpuMat);
+                vw.write(mat);
                _isRecording = true;
-                std::fprintf(stdout, "Recording: %d\n", _fileCount);
+                // std::fprintf(stdout, "Recording: %d\n", _fileCount);
             } 
             else if (_isOpticalFlowDetected == false and _isRecording == true) {
                 ++_fileCount;
-                 std::fprintf(stdout, "Stop recording: %d\n", _fileCount);
+                //  std::fprintf(stdout, "Stop recording: %d\n", _fileCount);
                 _isRecording = false;
                 
-                _zed.disableRecording();
+                // _zed.disableRecording();
             }
 
             // showWindow();

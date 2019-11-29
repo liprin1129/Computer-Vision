@@ -168,12 +168,14 @@ void CameraManager::getSideBySizeFrameFromZED() {
                 if (_fileCount==currentCount) {
                     std::string saveFile = "/DATASETs/OpticalFlow-Motion-Dataset/" + std::to_string(_fileCount) + ".avi";
                     std::cout << saveFile << std::endl;
-                    vw = cv::VideoWriter(saveFile, CV_FOURCC('H','2','6','4'), zedCameraFps, _sideBySideCvGpuMat.size());
+                    // vw = cv::VideoWriter(saveFile, CV_FOURCC('H','2','6','4'), zedCameraFps, _sideBySideCvGpuMat.size());
+                    _zed.enableRecording( saveFile.c_str(), sl::SVO_COMPRESSION_MODE_LOSSLESS);
                     ++currentCount;
                 }
 
-                _sideBySideCvGpuMat.download(_sideBySideCvCpuMat);
-                vw.write(_sideBySideCvCpuMat);
+                // _sideBySideCvGpuMat.download(_sideBySideCvCpuMat);
+                // vw.write(_sideBySideCvCpuMat);
+                _zed.record();
 
                _isRecording = true;
                 //std::fprintf(stdout, "Recording: %d\n", _fileCount);
@@ -182,6 +184,7 @@ void CameraManager::getSideBySizeFrameFromZED() {
                 ++_fileCount;
                 //  std::fprintf(stdout, "Stop recording: %d\n", _fileCount);
                 _isRecording = false;
+                _zed.disableRecording();
             }
 
             showWindow();
