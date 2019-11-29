@@ -143,6 +143,7 @@ void CameraManager::getSideBySizeFrameFromZED(  std::mutex &threadLockMutex,
             _zed.retrieveImage(_sideBySideSlMat, sl::VIEW_SIDE_BY_SIDE, sl::MEM_GPU);
             
             cv::cuda::cvtColor(slMatToCvMatConverterForGPU(_sideBySideSlMat), _sideBySideCvGpuMat, cv::COLOR_RGBA2GRAY);
+            
             // FOR DISPLAY
             threadLockMutex.lock();
             sideBySideCvGpuMat = _sideBySideCvGpuMat.clone();
