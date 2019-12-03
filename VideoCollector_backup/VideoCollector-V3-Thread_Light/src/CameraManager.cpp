@@ -4,8 +4,9 @@ CameraManager::CameraManager() {
     initParams(); // Set configuration parameters
     openCamera();
 
-    createWindow();
-    zedCameraFps = _zed.getCameraFPS(); // Get FPS
+    // createWindow();
+    // zedCameraFps = _zed.getCameraFPS(); // Get FPS
+    zedCameraFps = 60; // Get FPS
 
     frameCount = 0;
 
@@ -32,11 +33,11 @@ CameraManager::~CameraManager() {
  */
 void CameraManager::initParams() {    
     _init_params.camera_resolution = sl::RESOLUTION_HD720;
-    //_init_params.camera_resolution = sl::RESOLUTION_HD1080;
+    // _init_params.camera_resolution = sl::RESOLUTION_HD1080;
     //_init_params.camera_resolution = sl::RESOLUTION_HD2K;
     _init_params.depth_mode = sl::DEPTH_MODE_NONE;
     _init_params.camera_disable_imu = true; // disable imu of ZED
-    //_init_params.camera_fps = zedCameraFps;
+    _init_params.camera_fps = zedCameraFps;
     _runtime_parameters.enable_depth = false;
 }
 
@@ -129,11 +130,15 @@ cv::Mat slMat2cvMat(sl::Mat& input) {
 }
 
 
-void CameraManager::getSideBySizeFrameFromZED() {
+void CameraManager::getSideBySizeFrameFromZED(  std::mutex &threadLockMutex,
+                                                cv::cuda::GpuMat &sideBySideCvGpuMat,
+                                                std::vector<cv::cuda::GpuMat> &cvSideBySideGpuMatFrames, 
+                                                bool &isOpticalFlowDetected,
+                                                char &key) {
     dfm.lookupDirectory("/DATASETs/OpticalFlow-Motion-Dataset/", _fileCount);
     int currentCount = _fileCount;
 
-    char key = ' ';
+    // char key = ' ';
     while (key != 'q') {
         if (_zed.grab(_runtime_parameters) == sl::SUCCESS) {
             _zed.retrieveImage(_sideBySideSlMat, sl::VIEW_SIDE_BY_SIDE, sl::MEM_GPU);
@@ -142,55 +147,60 @@ void CameraManager::getSideBySizeFrameFromZED() {
 
             cv::cuda::cvtColor(_sideBySideCvGpuMatRGBA, _sideBySideCvGpuMat, cv::COLOR_RGBA2RGB);
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            
-            /*// FOR DISPLAY
+            // cv::cuda::cvtColor(slMatToCvMatConverterForGPU(_sideBySideSlMat), _sideBySideCvGpuMat, cv::COLOR_RGBA2GRAY);
+
+            // FOR DISPLAY
             threadLockMutex.lock();
             sideBySideCvGpuMat = _sideBySideCvGpuMat.clone();
             threadLockMutex.unlock();
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));*/
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
-            ++frameCount;
-            if (frameCount == 1) {
-                cv::cuda::cvtColor(_sideBySideCvGpuMat, _cvGreyGpuMat, cv::COLOR_RGB2GRAY);
-                _cvSideBySideGpuMatFrames.push_back(_cvGreyGpuMat.clone());
-            }
-            else if (frameCount == zedCameraFps) {
-                cv::cuda::cvtColor(_sideBySideCvGpuMat, _cvGreyGpuMat, cv::COLOR_RGB2GRAY);
-                _cvSideBySideGpuMatFrames.push_back(_cvGreyGpuMat.clone());
-
-                _isOpticalFlowDetected = ofm.startOpticalFlow(_cvSideBySideGpuMatFrames);
-
-                frameCount = 0;
-            };
-            
-
-            if (_isOpticalFlowDetected == true) {
+            if (isOpticalFlowDetected == true) {
                 if (_fileCount==currentCount) {
                     std::string saveFile = "/DATASETs/OpticalFlow-Motion-Dataset/" + std::to_string(_fileCount) + ".avi";
-                    std::cout << saveFile << std::endl;
-                    // vw = cv::VideoWriter(saveFile, CV_FOURCC('H','2','6','4'), zedCameraFps, _sideBySideCvGpuMat.size());
-                    _zed.enableRecording( saveFile.c_str(), sl::SVO_COMPRESSION_MODE_LOSSLESS);
+                    sl::String pathOutput(saveFile.c_str());
+                    // _zed.enableRecording(pathOutput, sl::SVO_COMPRESSION_MODE_LOSSLESS);
+                    vw = cv::VideoWriter(saveFile, CV_FOURCC('H','2','6','4'), zedCameraFps/2, _sideBySideCvGpuMat.size());
                     ++currentCount;
                 }
 
-                // _sideBySideCvGpuMat.download(_sideBySideCvCpuMat);
-                // vw.write(_sideBySideCvCpuMat);
-                _zed.record();
-
+                cv::Mat mat(_sideBySideCvGpuMat);
+                vw.write(mat);
                _isRecording = true;
-                //std::fprintf(stdout, "Recording: %d\n", _fileCount);
+                // std::fprintf(stdout, "Recording: %d\n", _fileCount);
             } 
             else if (_isOpticalFlowDetected == false and _isRecording == true) {
                 ++_fileCount;
                 //  std::fprintf(stdout, "Stop recording: %d\n", _fileCount);
                 _isRecording = false;
-                _zed.disableRecording();
+                
+                // _zed.disableRecording();
             }
 
-            showWindow();
+            ++frameCount;
+            if (frameCount == 1) {
+                _cvSideBySideGpuMatFrames.push_back(_sideBySideCvGpuMat.clone());
+            }
+            else if (frameCount == zedCameraFps) {
+                _cvSideBySideGpuMatFrames.push_back(_sideBySideCvGpuMat.clone());
+
+                threadLockMutex.lock();
+                cvSideBySideGpuMatFrames.assign(_cvSideBySideGpuMatFrames.begin(), _cvSideBySideGpuMatFrames.end());
+                // std::cout << "Camera: " << cv::cuda::sum(_cvSideBySideGpuMatFrames[0]) << " | " << cv::cuda::sum(_cvSideBySideGpuMatFrames[1]) << std::endl;
+                _isOpticalFlowDetected = isOpticalFlowDetected;
+                threadLockMutex.unlock();
+
+                _cvSideBySideGpuMatFrames.clear();
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                //_isOpticalFlowDetected = ofm.startOpticalFlow(_cvSideBySideGpuMatFrames);
+
+                frameCount = 0;
+            };
+
+            // showWindow();
         }
 
-        key = cv::waitKey(1);
+        // key = cv::waitKey(1);
     }
 
 }

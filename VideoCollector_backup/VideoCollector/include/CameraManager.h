@@ -29,7 +29,7 @@ class CameraManager {
         // zed Mat variables
         sl::Mat _zedLeftGpuMat, _zedRightGpuMat, _zedSideBySideGpuMat;
 
-        cv::cuda::GpuMat _cvLeftGpuMat, _cvRightGpuMat, _cvSideBySideGpuMat;
+        cv::cuda::GpuMat _cvLeftGpuMat, _cvRightGpuMat, _cvSideBySideGpuMatRGBA, _cvSideBySideGpuMat;
 
         //bool displayOK;
         

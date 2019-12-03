@@ -194,19 +194,24 @@ void CameraManager::getSideBySizeFrameFromZED(
             
             if (_zed.grab(_runtime_parameters) == sl::SUCCESS){
                 _zed.record();
-                //std::cout << "Camera Thread: " << key << std::endl << std::flush;
+                // std::cout << "Camera Thread: " << key << std::endl << std::flush;
                 _zed.retrieveImage(_zedSideBySideGpuMat, sl::VIEW_SIDE_BY_SIDE, sl::MEM_GPU);
 
-                cv::cuda::cvtColor(slMatToCvMatConverterForGPU(_zedSideBySideGpuMat), cvSideBySideGpuMat, cv::COLOR_BGRA2BGR);
+                // cv::cuda::cvtColor(slMatToCvMatConverterForGPU(_zedSideBySideGpuMat), cvSideBySideGpuMat, cv::COLOR_BGRA2BGR);
+                _cvSideBySideGpuMatRGBA = slMatToCvMatConverterForGPU(_zedSideBySideGpuMat);
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+                cv::cuda::cvtColor(_cvSideBySideGpuMatRGBA, _cvSideBySideGpuMat, cv::COLOR_BGRA2BGR);
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
                 // Lock
-                // threadLockMutex.lock();
+                threadLockMutex.lock();
                 
-                //cvSideBySideGpuMat = _cvSideBySideGpuMat.clone();
+                cvSideBySideGpuMat = _cvSideBySideGpuMat.clone();
 
                 // Unlock
-                // threadLockMutex.unlock();
-                // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                threadLockMutex.unlock();
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 
                 grabErrorCode = sl::SUCCESS;
 

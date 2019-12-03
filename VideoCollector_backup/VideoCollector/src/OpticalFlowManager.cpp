@@ -129,7 +129,7 @@ void OpticalFlowManager::startOpticalFlow(
         const int64 start = cv::getTickCount();
 
         threadLockMutex.lock();
-        //std::cout << "\t[Optic]\n";
+        std::cout << "\t[Optic]\n";
         
         if (isVectorFull == true) {
             // std::cout << "\t[Optic] FULL\n";
@@ -171,7 +171,7 @@ void OpticalFlowManager::startOpticalFlow(
 
             if (lMean > 1 or rMean > 1) {
                 opticalDetectedFlag = true;
-                // std::cout << "\t[Optic] Optical flow detected!\n";
+                std::cout << "\t[Optic] Optical flow detected!\n";
 
                 //threadLockMutex.unlock();
                 //std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -184,7 +184,7 @@ void OpticalFlowManager::startOpticalFlow(
                     recording = false;
                 }
                 opticalDetectedFlag = false;
-                // std::cout << "\t[Optic] Optical No!\n";
+                std::cout << "\t[Optic] Optical No!\n";
 
                 //threadLockMutex.unlock();
                 //std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -252,7 +252,7 @@ void OpticalFlowManager::startSideBySideOpticalFlow(
 
             if (sbsMean > 1) {
                 opticalDetectedFlag = true;
-                // std::cout << "\t[Optic] Optical flow detected!\n";
+                std::cout << "\t[Optic] Optical flow detected!\n";
                 recording = true;
             } else {
                 if (recording == true) {
@@ -260,7 +260,7 @@ void OpticalFlowManager::startSideBySideOpticalFlow(
                     recording = false;
                 }
                 opticalDetectedFlag = false;
-                // std::cout << "\t[Optic] Optical No!\n";
+                std::cout << "\t[Optic] Optical No!\n";
             }
 
             threadLockMutex.unlock();
